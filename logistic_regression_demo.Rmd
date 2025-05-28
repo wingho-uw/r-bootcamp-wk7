@@ -1,0 +1,154 @@
+---
+title: "Logistic regression"
+author: "Wing-Ho Ko"
+output: html_notebook
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(statmod)
+library(ciTools)
+library(MASS)
+library(ecotox)
+library(tidyverse)
+library(car)
+```
+
+Load the insecticides dataset (doi:10.1111/j.1744-7348.1950.tb00973.x) in which flour beetles were sprayed with 3 distinct insecticides at different dosage. The number of beetles killed after six days of exposure in each batch of size ≈ 50 were recorded
+
+```{r}
+insects <- read_csv("data/insecticides.csv")
+```
+
+```{r}
+insects
+```
+
+Visualize the data:
+
+```{r}
+ggplot(insects, aes(x=Deposit, y=Killed/Number, color=Insecticide, shape=Insecticide)) + 
+  geom_point(size=3)
+```
+
+Prepare the dataset for logistic regression
+
+```{r}
+insects <- insects |> mutate(
+  Insecticide = as.factor(Insecticide),
+  Alive = Number - Killed
+)
+```
+
+Perform logistic regression fit (as is customary, the log of dosage is used as explanatory variable)
+
+```{r}
+ins_glm <- glm(
+  cbind(Killed, Alive) ~ Insecticide * log10(Deposit), 
+  family=binomial, data=insects, 
+  contrasts=list(Insecticide=contr.sum)
+)
+
+summary(ins_glm)
+```
+
+Again, to test the effect of different insecticides as a whole we need to run `Anova()`
+
+```{r}
+Anova(ins_glm, type=3)
+```
+
+The confident interval for each fit parameter can be obtained via `confint()` as before:
+
+```{r}
+confint(ins_glm, "log10(Deposit)")
+```
+
+Get the fitted values (which are values of the expected response μ as opposed to the linear predictor η)
+
+```{r}
+fitted(ins_glm)
+```
+
+By default the so-called deviance residual is calculated by `residuals()` (or equivalently `resid()`). For better interpretation, we instead plot quantile residual from the `statmod` package, which is normally distributed:
+
+```{r}
+ggplot(insects, aes(x=Deposit, y=qresid(ins_glm), color=Insecticide, shape=Insecticide)) + 
+  geom_point(size=3)
+```
+
+Since the quantile residuals are supposed to be normally distributed when assumptions hold, we can run `shapiro.test()` on it like before:
+
+```{r}
+shapiro.test(qresid(ins_glm))
+```
+
+By default `predict()` gives the linear predictor η instead of the expected response μ. To force `predict()` to give information about the response, use `type=response`
+
+```{r}
+insects_new <- complete(
+  data.frame(Insecticide=NA, Deposit=NA),
+  Deposit = seq(2, 8, 0.2),
+  Insecticide = distinct(insects, Insecticide)$Insecticide
+) |> drop_na()
+```
+
+```{r}
+insects_pred <- cbind(
+  insects_new,
+  data.frame(prop = predict(ins_glm, insects_new, type="response"))
+)
+```
+
+```{r}
+insects_pred
+```
+
+```{r}
+ggplot(mapping=aes(x=Deposit, color=Insecticide, shape=Insecticide)) + 
+  geom_point(aes(y=Killed/Number), insects, size=3) +
+  geom_line(aes(y=prop), insects_pred)
+```
+
+Use `add_ci()` from `ciTools` to get confidence interval in prediction
+
+```{r}
+add_ci(insects_new, ins_glm)
+```
+
+Fitting only to insecticide C (since this is the form where `dose.p` and `LC_logit` are supposed to work)
+
+```{r}
+ins_C_glm <- glm(
+  cbind(Killed, Alive) ~ log10(Deposit), 
+  family=binomial, 
+  data=filter(insects, Insecticide=="C")
+)
+```
+
+Calculate the 50% and 90% lethal dose
+
+```{r}
+LD_50_90 <- dose.p(ins_C_glm, p=c(0.5, 0.9))
+
+print(LD_50_90)
+```
+
+Notice that the dosage and its SE is in the log scale. To get the actual (not log) dose we exponentiate (NOTE that the SE is the output is NOT properly rescaled)
+
+```{r}
+10^(LD_50_90)
+```
+
+Calculate the two dosage using `LC_logit()` function from `ecotox` instead. Note that `LC_logit` **assumes** the `log10` transformation and automatically perform the inverse transform. Also note that `p` is now in percentage rather than proportion
+
+```{r}
+LC_logit(
+  cbind(Killed, Alive) ~ log10(Deposit), 
+  data=filter(insects, Insecticide=="C"),
+  p = c(50, 90)
+)
+```

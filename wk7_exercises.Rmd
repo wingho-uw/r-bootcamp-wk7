@@ -1,0 +1,84 @@
+---
+title: "Week 7 exercises"
+author: "Wing-Ho Ko"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(car)
+library(lmtest)
+library(statmod)
+library(ciTools)
+```
+
+### Exercise 1
+
+A record of the passengers on the Titanic is found in "Titanic.csv" in the data folder.
+
+```{r}
+titanic_raw <- read_csv("data/Titanic.csv")
+```
+
+1. Clean the data by removing any records for which any of the column has an unknown values
+
+2. Make a box plot of the age of passengers against their fare class (PClass)
+
+3. Perform a one-way ANOVA to check if there is statistically significant difference in the mean ages of the 3 groups
+
+4. Perform a Tukey HSD test as a follow up. Does the Tukey HSD agree with the ANOVA?
+
+5. Perform a Levene's test to check if ANOVA was a good idea.
+
+6. Perform a Kruskal-Wallis test instead. Does our conclusion change as compared to ANOVA?
+
+
+### Exercise 2
+
+Return to the Titanic dataset. Again include only complete records. This time consider both sex and fare class
+
+1. Make a box plot of age against each combination of sex and fare class (there are multiple ways to do this. Pick one that make sense to you)
+
+2. Consider the interactive versus non-interactive model that describe how ages differ between different sex and fare class. Determine which model is better, balance between goodness-of-fit and number of parameters
+
+3. Perform a two-way ANOVA on the non-additive model to see how age differs between different sex and fare class. Determine if interaction between sex and fare class is statistically significant.
+
+
+### Exercise 3
+
+We will look at the fish market dataset from the "fish.csv" file in the data folder.
+
+```{r}
+fish_raw <- read_csv("data/fish.csv")
+```
+
+1. Filter the dataset to include only the "species" Bream, Perch, and Pike
+
+2. Construct a non-additive linear model where Length1 and Species are used to predict the weight of the fish, and print out its summary.
+
+3. Use the `Anova()` function from `car` to check if the interaction between species and length is statistically significant
+
+4. Construct a scatter plot of fish lengths (horizontal axis) versus weight (vertical axis), with shape and color of marker indicating species.
+
+5. Use the `predict()` function to create the best-fitted line for each species of fish, and include these in the above plot.
+
+6. Find the slope of the 3 best-fitted line you construct in part 5
+
+
+### Exercise 4
+
+Let's return to the titanic dataset. Again we'll include only complete observations
+
+1. Perform a logistic regression on the titanic data to model how survival may depend on age, fare class, and the interaction between the two. Print out the resulting summary.
+
+2. Perform an analysis of deviance (via `Anova()`) to check if the interaction between age and fare class is statistically significant.
+
+3. Plot the quantile residuals of logistic regression against age, using color and shape to distinguish between different fare classes. Perform an overall (include all Age and fare class) Shapiro-Wilk test to check if the quantile residuals are normally distributed.
+
+4. Make prediction on the odds of survival as function of both age and fare class, also include the 90% confidence interval. Plot the dependence of survival odds on age and their confidence intervals for each of the 3 classes.
+
+5. Find the age that corresponds to 50% survival chance for both the 1st and 2nd fare class. Include 90% confidence interval (hint: check the documentation of `LC_logit()` to see how to avoid taking the logarithm)

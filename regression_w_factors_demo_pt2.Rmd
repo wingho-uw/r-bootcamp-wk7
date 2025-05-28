@@ -1,0 +1,153 @@
+---
+title: "Linear regression involving factors, part 2"
+author: "Wing-Ho Ko"
+date: "2025-05-04"
+output: html_notebook
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(car)
+library(palmerpenguins)
+```
+
+### Two-way ANOVA
+
+Again start with the penguins dataset
+
+```{r}
+penguins_sim <- penguins |> drop_na()
+```
+
+```{r}
+penguins_sim
+```
+
+Perform linear regression on the dependence of body mass on sex and species (with interactions):
+
+```{r}
+pg_lm_2cat <- lm(
+  body_mass_g ~ sex * species, penguins, 
+  contrasts = list(sex=contr.sum, species=contr.sum)
+)
+
+summary(pg_lm_2cat)
+```
+
+Perform type III ANOVA:
+
+```{r}
+Anova(pg_lm_2cat, type=3)
+```
+
+Note that the interaction between sex and species is significant, so type III ANOVA is the appropriate choice here
+
+We can run the usual diagnostics for linear models:
+
+```{r}
+ggplot(penguins_sim) + geom_point(
+  aes(x=species, color=sex, y=resid(pg_lm_2cat)), 
+  position=position_dodge(width=0.5)
+)
+```
+
+```{r}
+shapiro.test(resid(pg_lm_2cat))
+```
+
+```{r}
+leveneTest(pg_lm_2cat)
+```
+
+Similarly, we can obtain prediction and confidence interval as usual
+
+```{r}
+penguins_new <- distinct(penguins_sim, species, sex)
+penguins_pred <- cbind(
+  penguins_new, 
+  predict(pg_lm_2cat, penguins_new, interval="confidence")
+)
+```
+
+```{r}
+penguins_pred
+```
+
+Compare with the mean of each unique combination
+
+```{r}
+penguins_sim |> group_by(sex, species) |> summarize(
+  body_mass_g = mean(body_mass_g)
+)
+```
+
+
+### Model with both cateogrical and continuous variables
+
+Again consider penguins body mass, this time using flipper length and species as explanatory variables.
+
+```{r}
+pg_lm_2vars <- lm(
+  body_mass_g ~ flipper_length_mm * species, penguins_sim, 
+  contrasts=list(species=contr.sum)
+)
+
+summary(pg_lm_2vars)
+```
+
+To test hypotheses regarding species as a group, we need to use the `Anova()` function again. Similar to using sum-to-zero contrasts, we should fit with mean-subtracted flipper length
+
+```{r}
+penguins_sub <- penguins_sim |> mutate(
+  flipper_diff_mm = flipper_length_mm - mean(flipper_length_mm)
+)
+```
+
+```{r}
+pg_lm_2sub <- lm(
+  body_mass_g ~ flipper_diff_mm * species, penguins_sub,
+  contrasts=list(species=contr.sum)
+)
+```
+
+```{r}
+summary(pg_lm_2sub)
+```
+
+```{r}
+Anova(pg_lm_2sub, type=3)
+```
+
+making 3 prediction lines, one for each species
+
+```{r}
+penguins_2sub_new <- complete(
+  data.frame(flipper_length_mm=NA, species=NA),
+  flipper_length_mm = seq(175, 231, 2.5),
+  species = distinct(penguins_sim, species)$species
+) |> drop_na()
+```
+
+```{r}
+penguins_2sub_new <- penguins_2sub_new |> mutate(
+  flipper_diff_mm = flipper_length_mm - mean(penguins_sim$flipper_length_mm)
+)
+```
+
+```{r}
+penguins_2sub_pred <- cbind(
+  penguins_2sub_new,
+  data.frame(body_mass_g = predict(pg_lm_2sub, penguins_2sub_new))
+)
+```
+
+```{r}
+ggplot(mapping=aes(x=flipper_length_mm, y=body_mass_g, color=species)) +
+  geom_point(aes(shape=species), data = penguins_sub) +
+  geom_line(aes(linetype=species), data = penguins_2sub_pred, linewidth=1.2)
+```
+

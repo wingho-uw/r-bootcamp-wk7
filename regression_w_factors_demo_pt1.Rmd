@@ -1,0 +1,133 @@
+---
+title: "Linear regression involving factors, part 1"
+author: "Wing-Ho Ko"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(lmtest)
+library(car)
+library(palmerpenguins)
+```
+
+```{r}
+penguins_sim <- penguins |> select(species:sex) |> drop_na()
+```
+
+```{r}
+penguins_sim
+```
+
+```{r}
+pg_lm_sex <- lm(body_mass_g ~ sex, penguins_sim)
+```
+
+```{r}
+summary(pg_lm_sex)
+```
+
+Checking the coding used
+
+```{r}
+pg_lm_sex$contrasts
+```
+
+Perform linear regression on the species variable
+
+```{r}
+pg_lm_sp <- lm(body_mass_g ~ species, penguins_sim)
+```
+
+```{r}
+summary(pg_lm_sp)
+```
+
+Use a different coding. Note that even though the problem is essentially the same, the fitted coefficients will be different
+
+```{r}
+pg_lm_sp2 <- lm(
+  body_mass_g ~ species, penguins_sim, 
+  contrasts=list(species=contr.sum)
+)
+```
+
+```{r}
+summary(pg_lm_sp2)
+```
+
+Functions such as `coef()`, `confint()` and `predict()` continues to work:
+
+```{r}
+confint(pg_lm_sp)
+```
+
+```{r}
+pg_new <- data.frame(species=c("Adelie", "Chinstrap", "Gentoo"))
+pg_pred <- predict(pg_lm_sp, pg_new)
+pg_new <- cbind(pg_new, data.frame(body_mass_g = pg_pred))
+```
+
+```{r}
+pg_new
+```
+
+The "prediction" is the same as the mean from each species
+
+```{r}
+penguins_sim |> group_by(species) |> summarize(
+  body_mass_g = mean(body_mass_g)
+)
+```
+
+Perform ANOVA using the linear regression performed
+
+```{r}
+anova(pg_lm_sp)
+```
+
+Directly perform the ANOVA using `aov()`
+
+```{r}
+pg_aov_sp <- aov(body_mass_g ~ species, penguins_sim)
+
+summary(pg_aov_sp)
+```
+
+Test for homoscedasticity:
+
+```{r}
+leveneTest(body_mass_g ~ species, penguins_sim)
+```
+
+Test for normality
+
+```{r}
+shapiro.test(filter(penguins_sim, species=="Adelie")$body_mass_g)
+```
+
+```{r}
+shapiro.test(filter(penguins_sim, species=="Chinstrap")$body_mass_g)
+```
+
+```{r}
+shapiro.test(filter(penguins_sim, species=="Gentoo")$body_mass_g)
+```
+
+Perform the Kruskal-Wallis test instead of ANOVA
+
+```{r}
+kruskal.test(body_mass_g ~ species, penguins_sim)
+```
+
+Perform Tukey HSD test for pairwise comparison
+
+```{r}
+TukeyHSD(pg_aov_sp)
+```
+
+
