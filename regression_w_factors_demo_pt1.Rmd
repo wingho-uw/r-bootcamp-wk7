@@ -37,6 +37,12 @@ Checking the coding used
 pg_lm_sex$contrasts
 ```
 
+Note that the first level in sex is being treated as the "control" level
+
+```{r}
+levels(penguins$sex)
+```
+
 Perform linear regression on the species variable
 
 ```{r}
@@ -45,6 +51,12 @@ pg_lm_sp <- lm(body_mass_g ~ species, penguins_sim)
 
 ```{r}
 summary(pg_lm_sp)
+```
+
+Again note that the first level in species is being treated as the "control" level
+
+```{r}
+levels(penguins$species)
 ```
 
 Use a different coding. Note that even though the problem is essentially the same, the fitted coefficients will be different
@@ -58,6 +70,10 @@ pg_lm_sp2 <- lm(
 
 ```{r}
 summary(pg_lm_sp2)
+```
+
+```{r}
+pg_lm_sp2$contrasts
 ```
 
 Functions such as `coef()`, `confint()` and `predict()` continues to work:
@@ -129,5 +145,4 @@ Perform Tukey HSD test for pairwise comparison
 ```{r}
 TukeyHSD(pg_aov_sp)
 ```
-
 

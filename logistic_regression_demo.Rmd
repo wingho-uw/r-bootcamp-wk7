@@ -97,9 +97,16 @@ insects_new <- complete(
 ```
 
 ```{r}
+insects_new
+```
+
+
+```{r}
+insects_pred_prop = predict(ins_glm, insects_new, type="response")
+
 insects_pred <- cbind(
   insects_new,
-  data.frame(prop = predict(ins_glm, insects_new, type="response"))
+  data.frame(prop = insects_pred_prop)
 )
 ```
 
@@ -152,3 +159,4 @@ LC_logit(
   p = c(50, 90)
 )
 ```
+

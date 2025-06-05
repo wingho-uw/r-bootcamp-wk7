@@ -1,7 +1,6 @@
 ---
 title: "Linear regression involving factors, part 2"
 author: "Wing-Ho Ko"
-date: "2025-05-04"
 output: html_notebook
 ---
 
@@ -46,7 +45,7 @@ Anova(pg_lm_2cat, type=3)
 
 Note that the interaction between sex and species is significant, so type III ANOVA is the appropriate choice here
 
-We can run the usual diagnostics for linear models:
+We can run the usual diagnostics for linear models, e.g., looking at the (quantile) residuals:
 
 ```{r}
 ggplot(penguins_sim) + geom_point(
@@ -55,9 +54,13 @@ ggplot(penguins_sim) + geom_point(
 )
 ```
 
+Checking normality by running the Shapiro-Wilk test
+
 ```{r}
 shapiro.test(resid(pg_lm_2cat))
 ```
+
+Checking homoscedasticity using the Levene's test
 
 ```{r}
 leveneTest(pg_lm_2cat)
@@ -82,7 +85,7 @@ Compare with the mean of each unique combination
 ```{r}
 penguins_sim |> group_by(sex, species) |> summarize(
   body_mass_g = mean(body_mass_g)
-)
+) |> ungroup()
 ```
 
 
@@ -133,15 +136,22 @@ penguins_2sub_new <- complete(
 ```
 
 ```{r}
+penguins_2sub_new
+```
+
+
+```{r}
 penguins_2sub_new <- penguins_2sub_new |> mutate(
   flipper_diff_mm = flipper_length_mm - mean(penguins_sim$flipper_length_mm)
 )
 ```
 
 ```{r}
+penguins_2sub_pred_body_mass <- predict(pg_lm_2sub, penguins_2sub_new)
+
 penguins_2sub_pred <- cbind(
   penguins_2sub_new,
-  data.frame(body_mass_g = predict(pg_lm_2sub, penguins_2sub_new))
+  data.frame(body_mass_g = penguins_2sub_pred_body_mass)
 )
 ```
 
